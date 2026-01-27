@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  --card: #1e293b;
+  --card-hover: #334155;
+  --accent: #3b82f6;
+  --accent-green: #22c55e;
+  --accent-red: #ef4444;
+  --accent-yellow: #eab308;
+  --border: #334155;
 }
 
 @theme inline {
@@ -12,15 +19,106 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
 }
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--card);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Table styles */
+.player-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.player-table th,
+.player-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.player-table th {
+  background: var(--card);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.player-table tr:hover {
+  background: var(--card-hover);
+}
+
+/* Form indicator */
+.form-up {
+  color: var(--accent-green);
+}
+
+.form-down {
+  color: var(--accent-red);
+}
+
+.form-stable {
+  color: var(--accent-yellow);
+}
+
+/* Cards */
+.stat-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Team badges */
+.team-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 40px;
+}
+
+.team-fcm { background: #1a1a1a; color: #fff; }
+.team-fck { background: #0033a0; color: #fff; }
+.team-bif { background: #ffe100; color: #000; }
+.team-agf { background: #fff; color: #000; border: 1px solid #ccc; }
+.team-ob { background: #00529b; color: #fff; }
+.team-fcn { background: #dc2626; color: #fff; }
+.team-aab { background: #dc2626; color: #fff; }
+.team-sif { background: #dc2626; color: #fff; }
+.team-vff { background: #22c55e; color: #fff; }
+.team-rfc { background: #1e3a8a; color: #fff; }
+.team-vb { background: #dc2626; color: #fff; }
+.team-lbk { background: #1e3a8a; color: #fff; }
+.team-sjf { background: #1e3a8a; color: #fff; }
+.team-fcf { background: #fff; color: #000; border: 1px solid #ccc; }
