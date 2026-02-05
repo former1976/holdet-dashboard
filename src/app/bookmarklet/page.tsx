@@ -36,34 +36,59 @@ export default function BookmarkletPage() {
   }else{alert('Ingen spillere fundet.');}
 })();`;
 
-  // Script for Superliga.dk stats - henter MÅL, ASSISTS osv.
-  const superligaScript = `(function(){
-  var nameRows=document.querySelectorAll('table.players tbody tr');
-  var statRows=document.querySelectorAll('.stats-table table tbody tr');
-  var results=[];
+  // Script for Superliga.dk stats - henter MÅL, ASSISTS osv. fra ALLE sider
+  const superligaScript = `(async function(){
+  var allResults=[];
   var teamNames={'FCM':'FC Midtjylland','FCK':'FC København','BIF':'Brøndby IF','AGF':'AGF','OB':'OB','FCN':'FC Nordsjælland','SIF':'Silkeborg IF','VFF':'Viborg FF','RFC':'Randers FC','VB':'Vejle Boldklub','AaB':'AaB','LBK':'Lyngby BK','SJF':'SønderjyskE','FCF':'FC Fredericia','HIF':'Hvidovre IF'};
-  for(var i=0;i<nameRows.length&&i<statRows.length;i++){
-    var nameEl=nameRows[i].querySelector('td.name span');
-    var statCells=statRows[i].querySelectorAll('td');
-    if(nameEl&&statCells.length>=5){
-      var name=nameEl.textContent.trim();
-      var team=statCells[0]?.textContent.trim()||'';
-      var fullTeam=teamNames[team]||team;
-      var matches=statCells[1]?.textContent.trim()||'0';
-      var minutes=statCells[2]?.textContent.trim().replace('.','').replace(',','')||'0';
-      var goals=statCells[3]?.textContent.trim()||'0';
-      var assists=statCells[4]?.textContent.trim()||'0';
-      var total=parseInt(goals)+parseInt(assists);
-      var minPerContrib=total>0?Math.round(parseInt(minutes)/total):0;
-      results.push(name+'|'+fullTeam+'|'+team+'|'+matches+'|'+goals+'|'+assists+'|'+total+'|'+minPerContrib);
+
+  function getPlayersFromPage(){
+    var nameRows=document.querySelectorAll('table.players tbody tr');
+    var statRows=document.querySelectorAll('.stats-table table tbody tr');
+    var results=[];
+    for(var i=0;i<nameRows.length&&i<statRows.length;i++){
+      var nameEl=nameRows[i].querySelector('td.name span');
+      var statCells=statRows[i].querySelectorAll('td');
+      if(nameEl&&statCells.length>=5){
+        var name=nameEl.textContent.trim();
+        var team=statCells[0]?.textContent.trim()||'';
+        var fullTeam=teamNames[team]||team;
+        var matches=statCells[1]?.textContent.trim()||'0';
+        var minutes=statCells[2]?.textContent.trim().replace('.','').replace(',','')||'0';
+        var goals=statCells[3]?.textContent.trim()||'0';
+        var assists=statCells[4]?.textContent.trim()||'0';
+        var total=parseInt(goals)+parseInt(assists);
+        var minPerContrib=total>0?Math.round(parseInt(minutes)/total):0;
+        results.push(name+'|'+fullTeam+'|'+team+'|'+matches+'|'+goals+'|'+assists+'|'+total+'|'+minPerContrib);
+      }
     }
+    return results;
   }
-  if(results.length>0){
-    var text=results.join('\\n');
-    navigator.clipboard.writeText(text).then(function(){
-      alert('Kopieret '+results.length+' spillere med STATS!');
+
+  function getPageButtons(){
+    return Array.from(document.querySelectorAll('.pagination button')).filter(b=>!isNaN(parseInt(b.textContent)));
+  }
+
+  var pageButtons=getPageButtons();
+  var totalPages=pageButtons.length>0?parseInt(pageButtons[pageButtons.length-1].textContent):1;
+
+  console.log('Henter spillere fra '+totalPages+' sider...');
+
+  for(var page=1;page<=totalPages;page++){
+    var btn=Array.from(document.querySelectorAll('.pagination button')).find(b=>b.textContent.trim()===String(page));
+    if(btn&&!btn.classList.contains('active')){
+      btn.click();
+      await new Promise(r=>setTimeout(r,500));
+    }
+    var pagePlayers=getPlayersFromPage();
+    allResults=allResults.concat(pagePlayers);
+    console.log('Side '+page+': '+pagePlayers.length+' spillere (total: '+allResults.length+')');
+  }
+
+  if(allResults.length>0){
+    navigator.clipboard.writeText(allResults.join('\\n')).then(function(){
+      alert('Kopieret '+allResults.length+' spillere fra '+totalPages+' sider!');
     }).catch(function(){
-      console.log(text);
+      console.log(allResults.join('\\n'));
       alert('Se konsol for data');
     });
   }else{alert('Ingen spillere fundet');}
