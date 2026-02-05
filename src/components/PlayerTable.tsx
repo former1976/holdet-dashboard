@@ -1,7 +1,7 @@
 'use client';
 
 import { Player } from '@/types/player';
-import { TrendingUp, TrendingDown, Minus, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, ArrowUpDown, ArrowUp, ArrowDown, Flame } from 'lucide-react';
 import { useState } from 'react';
 
 interface PlayerTableProps {
@@ -9,7 +9,7 @@ interface PlayerTableProps {
   onPlayerSelect?: (player: Player) => void;
 }
 
-type SortKey = 'name' | 'team' | 'matches' | 'goals' | 'assists' | 'total' | 'minutesPerContribution' | 'valuePerMillion';
+type SortKey = 'name' | 'team' | 'matches' | 'goals' | 'assists' | 'total' | 'minutesPerContribution' | 'valuePerMillion' | 'recentGains';
 type SortDirection = 'asc' | 'desc';
 
 export function PlayerTable({ players, onPlayerSelect }: PlayerTableProps) {
@@ -54,10 +54,22 @@ export function PlayerTable({ players, onPlayerSelect }: PlayerTableProps) {
       : <ArrowDown className="w-4 h-4" />;
   };
 
-  const TrendIcon = ({ trend }: { trend?: 'up' | 'down' | 'stable' }) => {
-    if (trend === 'up') return <TrendingUp className="w-4 h-4 form-up" />;
-    if (trend === 'down') return <TrendingDown className="w-4 h-4 form-down" />;
-    return <Minus className="w-4 h-4 form-stable" />;
+  const TrendIcon = ({ player }: { player: Player }) => {
+    const { trend, recentGains, isHot } = player;
+
+    return (
+      <div className="flex items-center justify-center gap-1">
+        {isHot && <span title="Hot! Stiger hurtigt"><Flame className="w-4 h-4 text-orange-500" /></span>}
+        {trend === 'up' && <TrendingUp className="w-4 h-4 form-up" />}
+        {trend === 'down' && <TrendingDown className="w-4 h-4 form-down" />}
+        {trend === 'stable' && <Minus className="w-4 h-4 form-stable" />}
+        {recentGains !== undefined && recentGains !== 0 && (
+          <span className={`text-xs font-mono ${recentGains > 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {recentGains > 0 ? '+' : ''}{recentGains}
+          </span>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -121,14 +133,18 @@ export function PlayerTable({ players, onPlayerSelect }: PlayerTableProps) {
                   Min/Mål <SortIcon columnKey="minutesPerContribution" />
                 </div>
               </th>
-              <th className="text-center">Form</th>
+              <th className="cursor-pointer text-center" onClick={() => handleSort('recentGains')}>
+                <div className="flex items-center justify-center gap-2">
+                  Trend <SortIcon columnKey="recentGains" />
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody>
             {sortedPlayers.map((player, index) => (
               <tr
                 key={player.id}
-                className="cursor-pointer"
+                className={`cursor-pointer ${player.isHot ? 'bg-orange-500/5' : ''}`}
                 onClick={() => onPlayerSelect?.(player)}
               >
                 <td>
@@ -137,6 +153,7 @@ export function PlayerTable({ players, onPlayerSelect }: PlayerTableProps) {
                       {index + 1}
                     </span>
                     <span className="font-medium">{player.name}</span>
+                    {player.isHot && <Flame className="w-3 h-3 text-orange-500" />}
                   </div>
                 </td>
                 <td>
@@ -156,7 +173,7 @@ export function PlayerTable({ players, onPlayerSelect }: PlayerTableProps) {
                   </span>
                 </td>
                 <td className="text-center">
-                  <TrendIcon trend={player.trend} />
+                  <TrendIcon player={player} />
                 </td>
               </tr>
             ))}

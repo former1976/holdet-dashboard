@@ -10,6 +10,7 @@ import { HotPlayers } from '@/components/HotPlayers';
 import { FixtureAnalysis } from '@/components/FixtureAnalysis';
 import { TransferCalculator } from '@/components/TransferCalculator';
 import { PriceImporter } from '@/components/PriceImporter';
+import { PlayerImporter } from '@/components/PlayerImporter';
 import { RefreshCw, ExternalLink, Info, ChevronDown, Menu, X } from 'lucide-react';
 
 type TabType = 'overview' | 'fixtures' | 'transfers' | 'players';
@@ -198,6 +199,10 @@ export default function Home() {
             {/* Transfers Tab */}
             {activeTab === 'transfers' && (
               <div className="space-y-8">
+                <PlayerImporter
+                  players={players}
+                  onPlayersImported={fetchPlayers}
+                />
                 <PriceImporter
                   players={players}
                   onPricesImported={(prices) => setImportedPrices(prices)}

@@ -14,11 +14,13 @@ export interface Player {
   price?: number; // price in millions (from holdet.dk)
   priceChange?: number; // price change from last round
   valuePerMillion?: number; // total / price
-  form?: number; // recent form score (last 5 matches)
+  form?: number; // recent form score (contributions per day tracked)
   trend?: 'up' | 'down' | 'stable';
   recentGoals?: number; // goals in last 5 matches
   recentAssists?: number; // assists in last 5 matches
-  isHot?: boolean; // trending player
+  recentGains?: number; // total contributions gained since first tracked
+  historyCount?: number; // number of snapshots in history
+  isHot?: boolean; // trending player (gained 3+ contributions recently)
 }
 
 export interface Match {
@@ -86,4 +88,20 @@ export interface HotPlayer {
   contributionsPerMatch: number;
   hotStreak: number; // consecutive matches with contributions
   reason: string;
+}
+
+// Snapshot of player stats at a point in time (for tracking trends)
+export interface PlayerSnapshot {
+  playerId: string;
+  date: string; // ISO date string
+  goals: number;
+  assists: number;
+  total: number;
+  price?: number;
+}
+
+// Player history for trend analysis
+export interface PlayerHistory {
+  playerId: string;
+  snapshots: PlayerSnapshot[];
 }
