@@ -3,17 +3,11 @@
 import { useState, useEffect } from 'react';
 import { Player } from '@/types/player';
 import { PlayerTable } from '@/components/PlayerTable';
-import { StatCards } from '@/components/StatCards';
-import { TopPerformers } from '@/components/TopPerformers';
-import { ValuePicks } from '@/components/ValuePicks';
-import { HotPlayers } from '@/components/HotPlayers';
-import { FixtureAnalysis } from '@/components/FixtureAnalysis';
 import { TransferCalculator } from '@/components/TransferCalculator';
-import { PriceImporter } from '@/components/PriceImporter';
 import { PlayerImporter } from '@/components/PlayerImporter';
-import { RefreshCw, ExternalLink, Info, ChevronDown, Menu, X } from 'lucide-react';
+import { RefreshCw, ExternalLink, Info, Menu, X } from 'lucide-react';
 
-type TabType = 'overview' | 'fixtures' | 'transfers' | 'players';
+type TabType = 'import' | 'players' | 'transfers';
 
 export default function Home() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -21,9 +15,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [activeTab, setActiveTab] = useState<TabType>('import');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [importedPrices, setImportedPrices] = useState<Record<string, number>>({});
 
   const fetchPlayers = async () => {
     setLoading(true);
@@ -47,10 +40,9 @@ export default function Home() {
   }, []);
 
   const tabs = [
-    { id: 'overview' as TabType, label: 'Overblik', icon: '📊' },
-    { id: 'fixtures' as TabType, label: 'Kampe', icon: '📅' },
-    { id: 'transfers' as TabType, label: 'Bytter', icon: '🔄' },
+    { id: 'import' as TabType, label: 'Importér', icon: '📥' },
     { id: 'players' as TabType, label: 'Spillere', icon: '👥' },
+    { id: 'transfers' as TabType, label: 'Bytter', icon: '🔄' },
   ];
 
   return (
@@ -179,45 +171,58 @@ export default function Home() {
           </div>
         ) : (
           <>
-            {/* Overview Tab */}
-            {activeTab === 'overview' && (
-              <div className="space-y-8">
-                <StatCards players={players} />
-                <HotPlayers players={players} />
-                <ValuePicks players={players} />
-                <TopPerformers players={players} />
-              </div>
-            )}
-
-            {/* Fixtures Tab */}
-            {activeTab === 'fixtures' && (
-              <div className="space-y-8">
-                <FixtureAnalysis players={players} />
-              </div>
-            )}
-
-            {/* Transfers Tab */}
-            {activeTab === 'transfers' && (
+            {/* Import Tab */}
+            {activeTab === 'import' && (
               <div className="space-y-8">
                 <PlayerImporter
                   players={players}
                   onPlayersImported={fetchPlayers}
                 />
-                <PriceImporter
-                  players={players}
-                  onPricesImported={(prices) => setImportedPrices(prices)}
-                />
-                <TransferCalculator players={players} />
+                {players.length === 0 && (
+                  <div className="stat-card text-center py-12">
+                    <p className="text-xl text-gray-400 mb-4">Ingen spillere importeret endnu</p>
+                    <p className="text-gray-500">
+                      Brug scriptet fra{' '}
+                      <a href="/bookmarklet" className="text-[var(--accent)] hover:underline">
+                        bookmarklet-siden
+                      </a>
+                      {' '}til at hente alle spillere fra Holdet.dk
+                    </p>
+                  </div>
+                )}
+                {players.length > 0 && (
+                  <div className="stat-card">
+                    <p className="text-green-400">
+                      ✓ {players.length} spillere importeret fra Holdet.dk
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Players Tab */}
             {activeTab === 'players' && (
               <div className="space-y-8">
-                <PlayerTable
-                  players={players}
-                  onPlayerSelect={setSelectedPlayer}
-                />
+                {players.length === 0 ? (
+                  <div className="stat-card text-center py-12">
+                    <p className="text-xl text-gray-400 mb-4">Ingen spillere endnu</p>
+                    <p className="text-gray-500">
+                      Gå til <button onClick={() => setActiveTab('import')} className="text-[var(--accent)] hover:underline">Importér</button> for at hente spillere fra Holdet.dk
+                    </p>
+                  </div>
+                ) : (
+                  <PlayerTable
+                    players={players}
+                    onPlayerSelect={setSelectedPlayer}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Transfers Tab */}
+            {activeTab === 'transfers' && (
+              <div className="space-y-8">
+                <TransferCalculator players={players} />
               </div>
             )}
           </>

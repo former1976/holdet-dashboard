@@ -21,6 +21,8 @@ export interface Player {
   recentGains?: number; // total contributions gained since first tracked
   historyCount?: number; // number of snapshots in history
   isHot?: boolean; // trending player (gained 3+ contributions recently)
+  isImported?: boolean; // true if player was imported from Holdet.dk
+  importedAt?: string; // ISO date when player was imported
 }
 
 export interface Match {
