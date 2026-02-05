@@ -37,7 +37,8 @@ export default function BookmarkletPage() {
     }
   });
   if(results.length>0){
-    copy(results.join('\\n'));
+    var text=results.join('\\n');
+    await navigator.clipboard.writeText(text);
     alert('Kopieret '+results.length+' spillere til udklipsholder!\\n\\nGå til dashboardet og indsæt i importfeltet.');
   }else{
     alert('Ingen spillere fundet.');
