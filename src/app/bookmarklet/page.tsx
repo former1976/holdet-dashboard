@@ -6,8 +6,43 @@ import { Copy, Check, ExternalLink, ArrowRight, Terminal } from 'lucide-react';
 export default function BookmarkletPage() {
   const [copiedConsole, setCopiedConsole] = useState(false);
 
-  // Console script - most reliable method
-  const consoleScript = `var players=[];document.querySelectorAll('tr[data-index]').forEach(function(row){var nameEl=row.querySelector('div.font-bold');var cells=row.querySelectorAll('td');if(nameEl&&cells.length>=2){var name=nameEl.textContent.trim();var span=cells[1].querySelector('span');if(span){var p=parseInt(span.textContent.trim().replace(/\\s/g,'').replace(/\\./g,''),10);if(name&&p>0)players.push(name+' '+(p/1000000))}}});if(players.length>0){copy(players.join('\\n'));alert('Kopieret '+players.length+' spillere!')}else{alert('Ingen spillere fundet. Scroll ned først.')}`;
+  // Auto-scroll and extract all players script
+  const consoleScript = `(async function(){
+  async function scrollToBottom(){
+    let lastHeight=0;
+    let attempts=0;
+    while(attempts<50){
+      window.scrollTo(0,document.body.scrollHeight);
+      await new Promise(r=>setTimeout(r,300));
+      if(document.body.scrollHeight===lastHeight)break;
+      lastHeight=document.body.scrollHeight;
+      attempts++;
+    }
+  }
+  console.log('Scroller ned for at loade alle spillere...');
+  await scrollToBottom();
+  var results=[];
+  document.querySelectorAll('tr[data-index]').forEach(function(row){
+    var nameEl=row.querySelector('div.font-bold');
+    var teamEl=row.querySelector('div.text-xs.text-gray-400, span.text-xs');
+    var cells=row.querySelectorAll('td');
+    if(nameEl&&cells.length>=2){
+      var name=nameEl.textContent.trim();
+      var teamText=teamEl?teamEl.textContent.trim():'';
+      var priceSpan=cells[1].querySelector('span');
+      var price=priceSpan?priceSpan.textContent.trim():'0';
+      if(name){
+        results.push(name+'\\n'+teamText+'\\n'+price+'    0    0    -    -    -    -    -    -    0 %    -    0');
+      }
+    }
+  });
+  if(results.length>0){
+    copy(results.join('\\n'));
+    alert('Kopieret '+results.length+' spillere til udklipsholder!\\n\\nGå til dashboardet og indsæt i importfeltet.');
+  }else{
+    alert('Ingen spillere fundet.');
+  }
+})();`;
 
   const copyCode = (code: string, setFn: (v: boolean) => void) => {
     navigator.clipboard.writeText(code);

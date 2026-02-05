@@ -42,14 +42,21 @@ export function PlayerImporter({ players, onPlayersImported }: PlayerImporterPro
     while (i < lines.length) {
       const line = lines[i].trim();
 
-      // Skip header lines (check if it looks like a header)
+      // Skip header lines
       if (line.toLowerCase().includes('navn') && line.toLowerCase().includes('pris')) {
         i++;
         continue;
       }
 
-      // Check if this line is a player name (no tabs, not "Info", not team line)
-      if (!line.includes('\t') && !line.includes(' · ') && line !== 'Info' && line.length > 1) {
+      // Check if this line looks like a data/price line (starts with number like "2.500.000")
+      const isPriceLine = /^\d{1,3}(?:\.\d{3}){1,2}\s/.test(line);
+
+      // Check if this line is a player name
+      const isTeamLine = line.includes(' · ');
+      const isInfoLine = line === 'Info';
+
+      if (!isPriceLine && !isTeamLine && !isInfoLine && line.length > 1) {
+        // This is a player name
         const playerName = line.replace(/\s*(Info|Ny|Skadet)\s*$/i, '').trim();
 
         // Next line should be team · position
@@ -68,40 +75,44 @@ export function PlayerImporter({ players, onPlayersImported }: PlayerImporterPro
           i++;
         }
 
-        // Next line should be the data line (tab-separated)
+        // Next line should be the data line
         let price = 0;
         let goals = 0;
         let assists = 0;
         let popularity = '';
 
-        if (i + 1 < lines.length && lines[i + 1].includes('\t')) {
+        if (i + 1 < lines.length) {
           const dataLine = lines[i + 1].trim();
-          const dataParts = dataLine.split('\t').map(p => p.trim());
 
-          // Parse price (first column) - format: "12.000.000"
-          if (dataParts[0]) {
-            const priceStr = dataParts[0].replace(/\./g, '').replace(/\s/g, '');
-            const priceNum = parseInt(priceStr, 10);
-            if (!isNaN(priceNum)) {
-              price = priceNum / 1000000;
+          // Check if this is actually a data line (starts with price)
+          if (/^\d{1,3}(?:\.\d{3}){1,2}/.test(dataLine)) {
+            // Split by tabs or multiple spaces
+            const dataParts = dataLine.split(/\t|\s{2,}/).map(p => p.trim()).filter(p => p);
+
+            // Parse price (first column) - format: "2.500.000" or "12.000.000"
+            if (dataParts[0]) {
+              const priceStr = dataParts[0].replace(/\./g, '');
+              const priceNum = parseInt(priceStr, 10);
+              if (!isNaN(priceNum)) {
+                price = priceNum / 1000000;
+              }
             }
-          }
 
-          // Parse goals (index 3) and assists (index 4)
-          // Values might be "-" for zero
-          if (dataParts[3] && dataParts[3] !== '-') {
-            goals = parseInt(dataParts[3], 10) || 0;
-          }
-          if (dataParts[4] && dataParts[4] !== '-') {
-            assists = parseInt(dataParts[4], 10) || 0;
-          }
+            // Parse goals (index 3) and assists (index 4)
+            if (dataParts[3] && dataParts[3] !== '-') {
+              goals = parseInt(dataParts[3], 10) || 0;
+            }
+            if (dataParts[4] && dataParts[4] !== '-') {
+              assists = parseInt(dataParts[4], 10) || 0;
+            }
 
-          // Parse popularity (index 9) - format: "2.8 %"
-          if (dataParts[9]) {
-            popularity = dataParts[9].trim();
-          }
+            // Parse popularity (index 9) - format: "0.2 %"
+            if (dataParts[9]) {
+              popularity = dataParts[9].trim();
+            }
 
-          i++;
+            i++;
+          }
         }
 
         if (playerName && price > 0) {
