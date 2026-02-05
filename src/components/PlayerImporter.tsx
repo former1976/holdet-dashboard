@@ -19,6 +19,8 @@ interface ParsedPlayer {
   popularity: string;
   matched: boolean;
   existingPlayer?: Player;
+  matches?: number;
+  minPerContrib?: number;
 }
 
 export function PlayerImporter({ players, onPlayersImported }: PlayerImporterProps) {
@@ -26,17 +28,52 @@ export function PlayerImporter({ players, onPlayersImported }: PlayerImporterPro
   const [parsedPlayers, setParsedPlayers] = useState<ParsedPlayer[]>([]);
   const [saved, setSaved] = useState(false);
 
-  // Parse Holdet.dk copy-paste format
-  // Format:
-  // Spillernavn
-  // Holdnavn · Position
-  // Info (optional)
-  // Pris    Totalvækst    Vækst    Mål    Assist    Gule    Røde    Sk    Rd    Pop.    Trend    Index
+  // Parse multiple formats:
+  // 1. Superliga.dk: Navn|Hold|Kort|Kampe|Mål|Assists|Total|Min/Bidrag
+  // 2. Holdet.dk: Spillernavn \n Holdnavn · Position \n Pris...
   const parseInput = () => {
     if (!importText.trim()) return;
 
     const lines = importText.split('\n').filter(line => line.trim());
     const results: ParsedPlayer[] = [];
+
+    // Check if this is Superliga.dk format (pipe-separated)
+    if (lines[0]?.includes('|')) {
+      for (const line of lines) {
+        const parts = line.split('|');
+        if (parts.length >= 7) {
+          const name = parts[0].trim();
+          const team = parts[1].trim();
+          const teamShort = parts[2].trim();
+          const matches = parseInt(parts[3]) || 0;
+          const goals = parseInt(parts[4]) || 0;
+          const assists = parseInt(parts[5]) || 0;
+          const total = parseInt(parts[6]) || 0;
+          const minPerContrib = parseInt(parts[7]) || 0;
+
+          const existingPlayer = findPlayer(name, team, players);
+
+          results.push({
+            name: existingPlayer?.name || name,
+            team: existingPlayer?.team || team,
+            position: existingPlayer?.position || 'Ukendt',
+            price: existingPlayer?.price || 0,
+            goals,
+            assists,
+            popularity: '',
+            matched: !!existingPlayer,
+            existingPlayer: existingPlayer || undefined,
+            matches,
+            minPerContrib,
+          });
+        }
+      }
+      setParsedPlayers(results);
+      setSaved(false);
+      return;
+    }
+
+    // Holdet.dk format parsing below
 
     let i = 0;
     while (i < lines.length) {
@@ -187,57 +224,40 @@ export function PlayerImporter({ players, onPlayersImported }: PlayerImporterPro
   };
 
   const savePlayers = async () => {
-    const newPlayers: Array<{
+    const playersToSave: Array<{
       name: string;
       team: string;
       position: string;
-      price: number;
+      price?: number;
       goals: number;
       assists: number;
+      matches?: number;
+      minutesPerContribution?: number;
     }> = [];
 
-    const prices: Record<string, number> = {};
-
     for (const item of parsedPlayers) {
-      if (item.matched && item.existingPlayer) {
-        // Update price for existing player
-        prices[item.existingPlayer.id] = item.price;
-      } else {
-        // Add as new player
-        newPlayers.push({
-          name: item.name,
-          team: item.team,
-          position: item.position,
-          price: item.price,
-          goals: item.goals,
-          assists: item.assists,
-        });
-      }
+      playersToSave.push({
+        name: item.name,
+        team: item.team,
+        position: item.position,
+        price: item.price || undefined,
+        goals: item.goals,
+        assists: item.assists,
+        matches: item.matches,
+        minutesPerContribution: item.minPerContrib,
+      });
     }
 
-    // Add new players to system
-    if (newPlayers.length > 0) {
+    // Save all players to system (both new and updates)
+    if (playersToSave.length > 0) {
       try {
         await fetch('/api/players', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ players: newPlayers }),
+          body: JSON.stringify({ players: playersToSave }),
         });
       } catch (e) {
-        console.error('Failed to add players:', e);
-      }
-    }
-
-    // Save prices for existing players
-    if (Object.keys(prices).length > 0) {
-      try {
-        await fetch('/api/prices', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prices }),
-        });
-      } catch (e) {
-        console.error('Failed to save prices:', e);
+        console.error('Failed to save players:', e);
       }
     }
 

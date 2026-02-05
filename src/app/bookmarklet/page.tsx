@@ -4,17 +4,17 @@ import { useState } from 'react';
 import { Copy, Check, ExternalLink, ArrowRight, Terminal } from 'lucide-react';
 
 export default function BookmarkletPage() {
-  const [copiedConsole, setCopiedConsole] = useState(false);
+  const [copiedHoldet, setCopiedHoldet] = useState(false);
+  const [copiedSuperliga, setCopiedSuperliga] = useState(false);
 
-  // Auto-scroll and extract all players script
-  const consoleScript = `(async function(){
+  // Script for Holdet.dk - henter PRISER
+  const holdetScript = `(async function(){
   console.log('Starter auto-scroll...');
   for(let i=0;i<100;i++){
     window.scrollTo(0,document.body.scrollHeight);
     await new Promise(r=>setTimeout(r,200));
   }
   window.scrollTo(0,0);
-  console.log('Henter spillere...');
   var results=[];
   document.querySelectorAll('tr[data-index]').forEach(function(row){
     var nameEl=row.querySelector('div.font-bold');
@@ -30,19 +30,43 @@ export default function BookmarkletPage() {
       }
     }
   });
-  console.log('Fandt '+results.length+' spillere');
+  if(results.length>0){
+    await navigator.clipboard.writeText(results.join('\\n'));
+    alert('Kopieret '+results.length+' spillere med PRISER!');
+  }else{alert('Ingen spillere fundet.');}
+})();`;
+
+  // Script for Superliga.dk stats - henter MÅL, ASSISTS osv.
+  const superligaScript = `(function(){
+  var nameRows=document.querySelectorAll('table.players tbody tr');
+  var statRows=document.querySelectorAll('.stats-table table tbody tr');
+  var results=[];
+  var teamNames={'FCM':'FC Midtjylland','FCK':'FC København','BIF':'Brøndby IF','AGF':'AGF','OB':'OB','FCN':'FC Nordsjælland','SIF':'Silkeborg IF','VFF':'Viborg FF','RFC':'Randers FC','VB':'Vejle Boldklub','AaB':'AaB','LBK':'Lyngby BK','SJF':'SønderjyskE','FCF':'FC Fredericia','HIF':'Hvidovre IF'};
+  for(var i=0;i<nameRows.length&&i<statRows.length;i++){
+    var nameEl=nameRows[i].querySelector('td.name span');
+    var statCells=statRows[i].querySelectorAll('td');
+    if(nameEl&&statCells.length>=5){
+      var name=nameEl.textContent.trim();
+      var team=statCells[0]?.textContent.trim()||'';
+      var fullTeam=teamNames[team]||team;
+      var matches=statCells[1]?.textContent.trim()||'0';
+      var minutes=statCells[2]?.textContent.trim().replace('.','').replace(',','')||'0';
+      var goals=statCells[3]?.textContent.trim()||'0';
+      var assists=statCells[4]?.textContent.trim()||'0';
+      var total=parseInt(goals)+parseInt(assists);
+      var minPerContrib=total>0?Math.round(parseInt(minutes)/total):0;
+      results.push(name+'|'+fullTeam+'|'+team+'|'+matches+'|'+goals+'|'+assists+'|'+total+'|'+minPerContrib);
+    }
+  }
   if(results.length>0){
     var text=results.join('\\n');
-    try{
-      await navigator.clipboard.writeText(text);
-      alert('Kopieret '+results.length+' spillere!\\n\\nGå til dashboardet og indsæt.');
-    }catch(e){
+    navigator.clipboard.writeText(text).then(function(){
+      alert('Kopieret '+results.length+' spillere med STATS!');
+    }).catch(function(){
       console.log(text);
-      alert('Clipboard virkede ikke. Data er printet i konsollen - marker og kopier derfra.');
-    }
-  }else{
-    alert('Ingen spillere fundet. Prøv at scrolle manuelt først.');
-  }
+      alert('Se konsol for data');
+    });
+  }else{alert('Ingen spillere fundet');}
 })();`;
 
   const copyCode = (code: string, setFn: (v: boolean) => void) => {
@@ -60,15 +84,71 @@ export default function BookmarkletPage() {
           </a>
         </div>
 
-        <h1 className="text-2xl font-bold mb-2">Importér priser fra Holdet.dk</h1>
+        <h1 className="text-2xl font-bold mb-2">Importér spillerdata</h1>
         <p className="text-gray-300 mb-8">
-          To metoder til at hente spillerpriser fra Holdet.dk ind i dashboardet.
+          Hent priser fra Holdet.dk og statistik fra Superliga.dk
         </p>
 
-        {/* Method 1: Copy-paste */}
+        {/* Step 1: Superliga.dk for stats */}
+        <div className="bg-[#1e293b] rounded-xl p-6 mb-6 border border-purple-500/30">
+          <h2 className="text-xl font-semibold mb-4 text-purple-400 flex items-center gap-2">
+            <Terminal className="w-5 h-5" />
+            Trin 1: Hent STATISTIK fra Superliga.dk
+          </h2>
+          <p className="text-sm text-gray-300 mb-4">Mål, assists, kampe, minutter osv.</p>
+
+          <div className="space-y-4">
+            <div className="flex gap-4 items-start">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center font-bold text-sm">1</div>
+              <div>
+                <p className="font-medium">Åbn spillerstatistik på Superliga.dk</p>
+                <a
+                  href="https://superliga.dk/stats#spiller"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-400 hover:underline text-sm inline-flex items-center gap-1"
+                >
+                  Åbn siden <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            <div className="flex gap-4 items-start">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center font-bold text-sm">2</div>
+              <p className="font-medium">Tryk F12 → Console fanen</p>
+            </div>
+
+            <div className="flex gap-4 items-start">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center font-bold text-sm">3</div>
+              <div>
+                <p className="font-medium">Indsæt dette script og tryk Enter:</p>
+                <div className="mt-2 p-3 rounded-lg bg-[#0f172a] border border-[#334155] font-mono text-xs text-purple-400 break-all max-h-32 overflow-y-auto">
+                  {superligaScript}
+                </div>
+                <button
+                  onClick={() => copyCode(superligaScript, setCopiedSuperliga)}
+                  className="mt-2 flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                >
+                  {copiedSuperliga ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copiedSuperliga ? 'Kopieret!' : 'Kopier script'}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-4 items-start">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center font-bold text-sm">4</div>
+              <p className="font-medium">Gå til dashboardet → Importér → Indsæt</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Step 2: Holdet.dk for prices */}
         <div className="bg-[#1e293b] rounded-xl p-6 mb-6 border border-green-500/30">
-          <h2 className="text-xl font-semibold mb-4 text-green-400">Metode 1: Kopiér tabellen direkte</h2>
-          <p className="text-sm text-gray-300 mb-4">Nemmeste metode - kræver ingen installation:</p>
+          <h2 className="text-xl font-semibold mb-4 text-green-400 flex items-center gap-2">
+            <Terminal className="w-5 h-5" />
+            Trin 2: Hent PRISER fra Holdet.dk
+          </h2>
+          <p className="text-sm text-gray-300 mb-4">Spillerpriser til budget-beregning</p>
 
           <div className="space-y-4">
             <div className="flex gap-4 items-start">
@@ -88,80 +168,29 @@ export default function BookmarkletPage() {
 
             <div className="flex gap-4 items-start">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 flex items-center justify-center font-bold text-sm">2</div>
-              <p className="font-medium">Scroll ned for at loade alle spillere</p>
+              <p className="font-medium">Tryk F12 → Console fanen</p>
             </div>
 
             <div className="flex gap-4 items-start">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 flex items-center justify-center font-bold text-sm">3</div>
               <div>
-                <p className="font-medium">Markér spillertabellen med musen og kopiér</p>
-                <p className="text-sm text-gray-400">Ctrl+C (Windows) / Cmd+C (Mac)</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 items-start">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 flex items-center justify-center font-bold text-sm">4</div>
-              <div>
-                <p className="font-medium">Gå til dashboardet → Bytter-fanen → Indsæt i tekstfeltet</p>
-                <p className="text-sm text-gray-400">Ctrl+V (Windows) / Cmd+V (Mac), tryk derefter &quot;Tilføj priser&quot;</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Method 2: Console script */}
-        <div className="bg-[#1e293b] rounded-xl p-6 mb-6 border border-blue-500/30">
-          <h2 className="text-xl font-semibold mb-4 text-blue-400 flex items-center gap-2">
-            <Terminal className="w-5 h-5" />
-            Metode 2: Konsol-script (avanceret)
-          </h2>
-          <p className="text-sm text-gray-300 mb-4">Kopierer alle spillerpriser automatisk:</p>
-
-          <div className="space-y-4">
-            <div className="flex gap-4 items-start">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm">1</div>
-              <div>
-                <p className="font-medium">Åbn spillerstatistik og scroll ned</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 items-start">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm">2</div>
-              <div>
-                <p className="font-medium">Tryk F12 for at åbne Developer Tools</p>
-                <p className="text-sm text-gray-400">Eller højreklik → &quot;Undersøg&quot; / &quot;Inspect&quot;</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 items-start">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm">3</div>
-              <div>
-                <p className="font-medium">Klik på &quot;Console&quot; fanen</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 items-start">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm">4</div>
-              <div>
                 <p className="font-medium">Indsæt dette script og tryk Enter:</p>
-                <div className="mt-2 p-3 rounded-lg bg-[#0f172a] border border-[#334155] font-mono text-xs text-green-400 break-all">
-                  {consoleScript}
+                <div className="mt-2 p-3 rounded-lg bg-[#0f172a] border border-[#334155] font-mono text-xs text-green-400 break-all max-h-32 overflow-y-auto">
+                  {holdetScript}
                 </div>
                 <button
-                  onClick={() => copyCode(consoleScript, setCopiedConsole)}
-                  className="mt-2 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                  onClick={() => copyCode(holdetScript, setCopiedHoldet)}
+                  className="mt-2 flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
                 >
-                  {copiedConsole ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copiedConsole ? 'Kopieret!' : 'Kopier script'}
+                  {copiedHoldet ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copiedHoldet ? 'Kopieret!' : 'Kopier script'}
                 </button>
               </div>
             </div>
 
             <div className="flex gap-4 items-start">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm">5</div>
-              <div>
-                <p className="font-medium">Gå til dashboardet → Bytter → Indsæt (Ctrl+V)</p>
-              </div>
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 flex items-center justify-center font-bold text-sm">4</div>
+              <p className="font-medium">Gå til dashboardet → Importér → Indsæt</p>
             </div>
           </div>
         </div>
