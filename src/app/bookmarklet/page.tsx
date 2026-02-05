@@ -8,40 +8,40 @@ export default function BookmarkletPage() {
 
   // Auto-scroll and extract all players script
   const consoleScript = `(async function(){
-  async function scrollToBottom(){
-    let lastHeight=0;
-    let attempts=0;
-    while(attempts<50){
-      window.scrollTo(0,document.body.scrollHeight);
-      await new Promise(r=>setTimeout(r,300));
-      if(document.body.scrollHeight===lastHeight)break;
-      lastHeight=document.body.scrollHeight;
-      attempts++;
-    }
+  console.log('Starter auto-scroll...');
+  for(let i=0;i<100;i++){
+    window.scrollTo(0,document.body.scrollHeight);
+    await new Promise(r=>setTimeout(r,200));
   }
-  console.log('Scroller ned for at loade alle spillere...');
-  await scrollToBottom();
+  window.scrollTo(0,0);
+  console.log('Henter spillere...');
   var results=[];
   document.querySelectorAll('tr[data-index]').forEach(function(row){
     var nameEl=row.querySelector('div.font-bold');
-    var teamEl=row.querySelector('div.text-xs.text-gray-400, span.text-xs');
+    var teamEl=row.querySelector('div.text-on-surface-muted, div.text-xs');
     var cells=row.querySelectorAll('td');
     if(nameEl&&cells.length>=2){
       var name=nameEl.textContent.trim();
       var teamText=teamEl?teamEl.textContent.trim():'';
-      var priceSpan=cells[1].querySelector('span');
+      var priceSpan=cells[1]?.querySelector('span');
       var price=priceSpan?priceSpan.textContent.trim():'0';
-      if(name){
+      if(name&&price.includes('000')){
         results.push(name+'\\n'+teamText+'\\n'+price+'    0    0    -    -    -    -    -    -    0 %    -    0');
       }
     }
   });
+  console.log('Fandt '+results.length+' spillere');
   if(results.length>0){
     var text=results.join('\\n');
-    await navigator.clipboard.writeText(text);
-    alert('Kopieret '+results.length+' spillere til udklipsholder!\\n\\nGå til dashboardet og indsæt i importfeltet.');
+    try{
+      await navigator.clipboard.writeText(text);
+      alert('Kopieret '+results.length+' spillere!\\n\\nGå til dashboardet og indsæt.');
+    }catch(e){
+      console.log(text);
+      alert('Clipboard virkede ikke. Data er printet i konsollen - marker og kopier derfra.');
+    }
   }else{
-    alert('Ingen spillere fundet.');
+    alert('Ingen spillere fundet. Prøv at scrolle manuelt først.');
   }
 })();`;
 
